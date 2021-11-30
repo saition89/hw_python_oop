@@ -12,6 +12,13 @@ class Calculator:
     def add_record(self, record):
         self.records.append(record)
 
+    def get_today_stats(self):
+        total = 0
+        for i in self.records:
+            if i.date == dt.date.today():
+                total += i.amount
+        return total
+
     def get_week_stats(self):
         today_date = dt.date.today()
         week_ago = today_date - dt.timedelta(days=7)
@@ -35,41 +42,26 @@ class Record:
 
 
 class CashCalculator(Calculator):
-
-    def get_today_stats(self):
-        spent = 0
-        for i in self.records:
-            if i.date == dt.date.today():
-                spent += i.amount
-        return f"Сегодня потрачено {spent} руб"
+    USD_RATE = 60.0
+    EURO_RATE = 70.0
+    CURRENCIES = {
+        "rub": (1, "руб"),
+        "usd": (USD_RATE, "USD"),
+        "eur": (EURO_RATE, "Euro")
+    }
 
     def get_today_cash_remained(self, currency):
-        spent = 0
-        error = (f'Валюта "{currency}" не поддерживается')
-        currencies = ['rub', 'eur', 'usd']
-        if currency not in currencies:
-            raise ValueError(error)
-        for i in self.records:
-            if i.date == dt.date.today():
-                spent += i.amount
-        if self.limit - spent > 0:
-            if currency == 'rub':
-                return f"На сегодня осталось {round((self.limit - spent), 2)} рублей"
-            if currency == 'eur':
-                return f"На сегодня осталось {round(((self.limit - spent) / 84), 2)} евро"
-            if currency == 'usd':
-                return f"На сегодня осталось {round(((self.limit - spent) / 74), 2)} долларов"
-
-        if self.limit - spent == 0:
-            return "Денег нет, держись"
-
-        if self.limit - spent < 0:
-            if currency == 'rub':
-                return f"Денег нет, держись: твой долг {round((self.limit - spent), 2)} рублей"
-            if currency == 'eur':
-                return f"Денег нет, держись: твой долг {round(((self.limit - spent) / 84), 2)} евро"
-            if currency == 'usd':
-                return f"Денег нет, держись: твой долг {round(((self.limit - spent) / 74), 2)} долларов"
+        if currency not in self.CURRENCIES:
+            raise ValueError(f'Валюта "{currency}" не поддерживается')
+        if self.limit == self.get_today_stats():
+            return f'Денег нет, держись'
+        rate, fullname = self.CURRENCIES[currency]
+        current_balance = round(
+            (self.limit - self.get_today_stats()) / rate, 2
+        )
+        if current_balance > 0:
+            return f'На сегодня осталось {current_balance} {fullname}'
+        return f'Денег нет, держись: твой долг - {abs(current_balance)} {fullname}'
 
 
 class CaloriesCalculator(Calculator):
@@ -84,15 +76,10 @@ class CaloriesCalculator(Calculator):
             return "Хватит есть!"
 
     def get_today_stats(self):
-        spent = 0
-        for i in self.records:
-            if i.date == dt.date.today():
-                spent += i.amount
-        return f"Сегодня съедено {spent} ККал"
+        return f"Сегодня съедено {Calculator.get_today_stats(self)} ККал"
 
 
 if __name__ == "__main__":
-
     calories_calculator = CaloriesCalculator(2000)
     r4 = Record(amount=1200, comment="Кусок тортика. И ещё один.")
     r5 = Record(amount=84, comment="Йогурт")
